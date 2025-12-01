@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura - Gemini Voice Assistant</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Custom styles for dark theme, glassmorphism, and animations */
+        :root {
+            --primary-color: #6d28d9; /* Deep violet */
+            --background-color: #110c28; /* Dark purple/blue */
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            background-color: var(--background-color);
+            font-family: 'Inter', sans-serif;
+            color: #e5e5e5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Background Orbs for Ambient Effect */
+        .background-orb {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.6;
+            z-index: -1;
+            animation: pulse 10s infinite alternate;
+        }
+
+        .background-orb:nth-child(1) {
+            background: #9333ea; /* Purple */
+            top: 10%;
+            left: 10%;
+        }
+
+        .background-orb:nth-child(2) {
+            background: #db2777; /* Pink */
+            bottom: 5%;
+            right: 5%;
+            animation-delay: -5s;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1) translate(0, 0); opacity: 0.6; }
+            100% { transform: scale(1.2) translate(-20px, 20px); opacity: 0.4; }
+        }
+
+        /* Glass Container */
+        .glass-container {
+            width: 100%;
+            max-width: 500px;
+            height: 80vh;
+            min-height: 500px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+
+        /* Header Styling */
+        header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-shadow: 0 0 5px rgba(109, 40, 217, 0.5);
+        }
+
+        /* Status Indicator */
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #ef4444; /* Red: Offline */
+            box-shadow: 0 0 5px #ef4444;
+            transition: background-color 0.5s, box-shadow 0.5s;
+        }
+
+        .status-indicator.ready {
+            background-color: #22c55e; /* Green: Ready */
+            box-shadow: 0 0 8px #22c55e;
+        }
+        
+        .status-indicator.listening {
+            background-color: #3b82f6; /* Blue: Listening */
+            box-shadow: 0 0 8px #3b82f6;
+            animation: breathe 1.5s infinite alternate;
+        }
+
+        .status-indicator.processing {
+            background-color: #f59e0b; /* Amber: Processing */
+            box-shadow: 0 0 8px #f59e0b;
+            animation: breathe 1.5s infinite alternate;
+        }
+
+        @keyframes breathe {
+            0% { opacity: 0.5; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1.1); }
+        }
+
+        /* Chat Container */
+        .chat-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            /* Custom Scrollbar for dark theme */
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary-color) rgba(255, 255, 255, 0.05);
+        }
+
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background-color: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Message Styling */
+        .message {
+            display: flex;
+            align-items: flex-end;
+            max-width: 85%;
+        }
+
+        .user-message {
+            margin-left: auto;
+            flex-direction: row-reverse;
+        }
+
+        .assistant-message {
+            margin-right: auto;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            color: white;
+            box-shadow: 0 0 8px rgba(109, 40, 217, 0.5);
+        }
+        
+        .user-message .avatar {
+            background-color: #2563eb; /* Blue for User */
+            margin-left: 0.5rem;
+        }
+        
+        .assistant-message .avatar {
+            margin-right: 0.5rem;
+        }
+        
+        .assistant-message .avatar i {
+            color: #fee2e2;
+        }
+        
+        .user-message .avatar i {
+            color: #dbeafe;
+        }
+
+        .content {
+            padding: 0.75rem 1rem;
+            border-radius: 1rem;
+            line-height: 1.5;
+        }
+
+        .assistant-message .content {
+            background-color: rgba(109, 40, 217, 0.1); /* Primary-light */
+            border: 1px solid rgba(109, 40, 217, 0.5);
+            border-bottom-left-radius: 0.25rem;
+        }
+
+        .user-message .content {
+            background-color: #1e3a8a; /* Blue-dark */
+            border: 1px solid #3b82f6;
+            border-bottom-right-radius: 0.25rem;
+        }
+        
+        .message-source {
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+        
+        .message-source a {
+            color: #38bdf8;
+            text-decoration: none;
+        }
+        
+        .message-source a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Loading indicator for image generation */
+        .image-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            font-style: italic;
+            color: #9ca3af;
+        }
+
+
+        /* Input Area */
+        .input-area {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .input-wrapper {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        #text-input {
+            flex-grow: 1;
+            padding: 0.75rem 1rem;
+            border-radius: 9999px;
+            border: 1px solid var(--glass-border);
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #e5e5e5;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        #text-input::placeholder {
+            color: #9ca3af;
+        }
+
+        #text-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.5);
+        }
+
+        /* Buttons */
+        .mic-btn, .send-btn, .stop-btn {
+            height: 44px;
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(150, 50, 255, 0.4);
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .mic-btn, .send-btn {
+            width: 44px;
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+        }
+
+        .mic-btn.active {
+            background: linear-gradient(135deg, #3b82f6, #10b981); /* Blue/Green while listening */
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.7);
+            animation: mic-pulse 1s infinite alternate;
+        }
+
+        .stop-btn {
+            display: none;
+            background-color: #ef4444; /* Red for Stop */
+            padding: 0 1rem;
+            border-radius: 9999px;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .stop-btn.active {
+            display: flex;
+            width: auto;
+        }
+
+        @keyframes mic-pulse {
+            0% { transform: scale(1); box-shadow: 0 0 5px rgba(50, 200, 255, 0.7); }
+            100% { transform: scale(1.1); box-shadow: 0 0 20px rgba(50, 200, 255, 0.7); }
+        }
+
+        .mic-btn:hover, .send-btn:hover, .stop-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* Audio Visualizer */
+        .visualizer {
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            height: 15px;
+            gap: 4px;
+        }
+        
+        .visualizer.active {
+            display: flex;
+        }
+
+        .visualizer .bar {
+            width: 4px;
+            height: 2px;
+            background-color: var(--primary-color);
+            border-radius: 2px;
+            transform-origin: bottom;
+            animation: visualize 0.5s infinite alternate;
+        }
+
+        .visualizer .bar:nth-child(2) { animation-delay: 0.1s; }
+        .visualizer .bar:nth-child(3) { animation-delay: 0.2s; }
+        .visualizer .bar:nth-child(4) { animation-delay: 0.3s; }
+        .visualizer .bar:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes visualize {
+            0% { transform: scaleY(1); }
+            100% { transform: scaleY(10); }
+        }
+        
+        /* Custom Modal for Alerts/Errors */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: var(--background-color);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid #ef4444;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+            text-align: center;
+        }
+
+        .modal-content h3 {
+            color: #ef4444;
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .modal-content button {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .modal-content button:hover {
+            background-color: #dc2626;
+        }
+
+        /* Image Generation Modal */
+        #image-modal {
+            background: rgba(0, 0, 0, 0.9);
+        }
+        
+        #image-modal .image-content {
+            max-width: 90vw;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            background: #1e1b46;
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 2px solid var(--primary-color);
+        }
+
+        #image-display {
+            max-width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 0.5rem;
+        }
+        
+        .image-content .close-btn {
+            background-color: var(--primary-color);
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            align-self: flex-end;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Custom Modal for Alerts/Errors (replaces alert()) -->
+    <div id="custom-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="modal-title">Error</h3>
+            <p id="modal-message">An unknown error occurred.</p>
+            <button id="modal-close-btn">Close</button>
+        </div>
+    </div>
+    
+    <!-- Image Generation Modal -->
+    <div id="image-modal" class="modal-overlay">
+        <div class="image-content">
+            <h3 class="text-white text-lg font-bold">Image Generated by Aura</h3>
+            <img id="image-display" src="" alt="Generated Image Placeholder">
+            <button id="image-modal-close-btn" class="close-btn"><i class="fa-solid fa-times"></i> Close</button>
+        </div>
+    </div>
+
+    <div class="background-orb"></div>
+    <div class="background-orb orb-2"></div>
+
+    <main class="glass-container">
+        <header>
+            <div class="status-indicator" id="status-indicator"></div>
+            <h1>Aura</h1>
+        </header>
+
+        <div class="chat-container" id="chat-container">
+            <!-- Initial Assistant Message -->
+            <div class="message assistant-message">
+                <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                <div class="content">Hello! I'm Aura. Try saying "play money song on Spotify" or "open Google". I cannot control system settings like volume.</div>
+            </div>
+            <!-- Dynamic messages will be added here -->
+        </div>
+
+        <div class="input-area">
+            <div class="visualizer" id="visualizer">
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+            </div>
+            <div class="input-wrapper">
+                <input type="text" id="text-input" placeholder="Type a question or command...">
+                <button id="mic-btn" class="mic-btn" title="Start/Stop Voice Input"><i class="fa-solid fa-microphone"></i></button>
+                <button id="send-btn" class="send-btn" title="Send Message"><i class="fa-solid fa-paper-plane"></i></button>
+                <button id="stop-btn" class="stop-btn" title="Stop Assistant Speech">STOP SPEECH</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- Configuration & Globals ---
+        // NOTE: The API key is automatically provided by the Canvas environment at runtime.
+        const apiKey = "AIzaSyBQw-vFJwRrCbfCPk4Ecc7TUkIKz8U25Lo"; 
+        const TEXT_MODEL = "gemini-2.5-flash-preview-09-2025";
+        const IMAGE_MODEL = "gemini-2.5-flash-image-preview";
+        const TTS_MODEL = "gemini-2.5-flash-preview-tts";
+        const MAX_HISTORY = 5; // Context size for conversation memory
+
+        const elements = {
+            chatContainer: document.getElementById('chat-container'),
+            textInput: document.getElementById('text-input'),
+            sendBtn: document.getElementById('send-btn'),
+            micBtn: document.getElementById('mic-btn'),
+            stopBtn: document.getElementById('stop-btn'),
+            visualizer: document.getElementById('visualizer'),
+            statusIndicator: document.getElementById('status-indicator'),
+            customModal: document.getElementById('custom-modal'),
+            modalTitle: document.getElementById('modal-title'),
+            modalMessage: document.getElementById('modal-message'),
+            modalCloseBtn: document.getElementById('modal-close-btn'),
+            imageModal: document.getElementById('image-modal'),
+            imageDisplay: document.getElementById('image-display'),
+            imageModalCloseBtn: document.getElementById('image-modal-close-btn'),
+        };
+
+        let isProcessing = false;
+        let isListening = false;
+        let recognition = null;
+        let currentAudio = null;
+        let chatHistory = []; // Conversation memory
+
+        // --- Utility Functions for TTS (PCM to WAV conversion) ---
+
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcm16, sampleRate) {
+            const numChannels = 1;
+            const bytesPerSample = 2;
+            const blockAlign = numChannels * bytesPerSample;
+            const byteRate = sampleRate * blockAlign;
+            const dataLength = pcm16.length * bytesPerSample;
+            const buffer = new ArrayBuffer(44 + dataLength);
+            const view = new DataView(buffer);
+
+            /* RIFF identifier */
+            view.setUint32(0, 0x52494646, false); 
+            /* RIFF chunk length */
+            view.setUint32(4, 36 + dataLength, true);
+            /* RIFF type */
+            view.setUint32(8, 0x57415645, false); 
+            /* format chunk identifier */
+            view.setUint32(12, 0x666d7420, false); 
+            /* format chunk length */
+            view.setUint32(16, 16, true);
+            /* sample format (raw) */
+            view.setUint16(20, 1, true);
+            /* channel count */
+            view.setUint16(22, numChannels, true);
+            /* sample rate */
+            view.setUint32(24, sampleRate, true);
+            /* byte rate (sample rate * block align) */
+            view.setUint32(28, byteRate, true);
+            /* block align (channels * bytes per sample) */
+            view.setUint16(32, blockAlign, true);
+            /* bits per sample */
+            view.setUint16(34, 16, true);
+            /* data chunk identifier */
+            view.setUint32(36, 0x64617461, false); 
+            /* data chunk length */
+            view.setUint32(40, dataLength, true);
+
+            // Write the PCM data
+            let offset = 44;
+            for (let i = 0; i < pcm16.length; i++) {
+                view.setInt16(offset, pcm16[i], true);
+                offset += 2;
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+
+        // --- UI State Management ---
+
+        function showModal(title, message, isError = true) {
+            elements.modalTitle.textContent = title;
+            elements.modalMessage.textContent = message;
+            elements.customModal.style.display = 'flex';
+            if (!isError) {
+                elements.customModal.querySelector('.modal-content').style.borderColor = '#22c55e';
+                elements.modalTitle.style.color = '#22c55e';
+                elements.modalCloseBtn.style.backgroundColor = '#22c55e';
+            } else {
+                 elements.customModal.querySelector('.modal-content').style.borderColor = '#ef4444';
+                elements.modalTitle.style.color = '#ef4444';
+                elements.modalCloseBtn.style.backgroundColor = '#ef4444';
+            }
+        }
+        
+        function hideModal() {
+            elements.customModal.style.display = 'none';
+        }
+
+        function showImageModal(imageUrl) {
+            elements.imageDisplay.src = imageUrl;
+            elements.imageModal.style.display = 'flex';
+        }
+        
+        function hideImageModal() {
+            elements.imageModal.style.display = 'none';
+            elements.imageDisplay.src = '';
+        }
+
+        function setStatus(state) {
+            elements.statusIndicator.className = 'status-indicator';
+            if (state === 'ready') {
+                elements.statusIndicator.classList.add('ready');
+            } else if (state === 'listening') {
+                elements.statusIndicator.classList.add('listening');
+            } else if (state === 'processing') {
+                elements.statusIndicator.classList.add('processing');
+            }
+        }
+
+        function toggleProcessing(enable) {
+            isProcessing = enable;
+            elements.textInput.disabled = enable;
+            elements.sendBtn.disabled = enable;
+            elements.micBtn.disabled = enable;
+            
+            if (!enable) {
+                setStatus('ready');
+            } else {
+                setStatus('processing');
+            }
+        }
+        
+        function toggleVisualizer(enable) {
+            if (enable) {
+                elements.visualizer.classList.add('active');
+                elements.stopBtn.classList.add('active'); 
+            } else {
+                elements.visualizer.classList.remove('active');
+                elements.stopBtn.classList.remove('active'); 
+            }
+        }
+
+        function addMessage(role, text, sources = []) {
+            // Append message to history
+            if (role === 'user' || role === 'assistant') {
+                chatHistory.push({ role: role === 'user' ? 'user' : 'model', parts: [{ text }] });
+                // Trim history to maintain context size
+                if (chatHistory.length > MAX_HISTORY) {
+                    // Keep the first initial assistant message and the last N messages
+                    chatHistory = [chatHistory[0], ...chatHistory.slice(chatHistory.length - MAX_HISTORY)];
+                }
+            }
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}-message`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            if (role === 'assistant') {
+                avatar.innerHTML = '<i class="fa-solid fa-robot"></i>';
+            } else {
+                avatar.innerHTML = '<i class="fa-solid fa-user"></i>';
+            }
+            
+            const contentContainer = document.createElement('div');
+            contentContainer.className = 'content-container';
+
+            const content = document.createElement('div');
+            content.className = 'content';
+            content.innerHTML = text; // Use innerHTML for image loading placeholder
+            
+            contentContainer.appendChild(content);
+
+            if (sources.length > 0) {
+                const sourceDiv = document.createElement('div');
+                sourceDiv.className = 'message-source';
+                
+                let sourceHTML = 'Sources: ';
+                sources.slice(0, 3).forEach((src, index) => {
+                    if (index > 0) sourceHTML += ', ';
+                    const title = src.title || 'Untitled Source';
+                    sourceHTML += `<a href="${src.uri}" target="_blank" rel="noopener noreferrer" title="${title}">${title.substring(0, 30)}...</a>`;
+                });
+                if (sources.length > 3) sourceHTML += ' and more.';
+                
+                sourceDiv.innerHTML = sourceHTML;
+                contentContainer.appendChild(sourceDiv);
+            }
+
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(contentContainer);
+            
+            elements.chatContainer.appendChild(messageDiv);
+            elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
+            return content; // Return content element for updating status
+        }
+
+        // --- Stop Speech Handler (now only handles audio and visualizer) ---
+        function stopSpeech() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
+            toggleVisualizer(false);
+        }
+
+        // --- API & Core Logic ---
+
+        async function fetchWithBackoff(url, options, maxRetries = 5) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) {
+                        return response;
+                    } else if (response.status === 429 && i < maxRetries - 1) {
+                        const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    } else {
+                        const errorBody = await response.json();
+                        throw new Error(`API Error ${response.status}: ${errorBody.error?.message || response.statusText}`);
+                    }
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+        
+        // 1. Fetch Text Content with Search Grounding
+        async function fetchGeminiText(query) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${TEXT_MODEL}:generateContent?key=${apiKey}`;
+            
+            // Append the new query to the history for the API call
+            const contents = [...chatHistory, { role: 'user', parts: [{ text: query }] }];
+
+            const payload = {
+                contents: contents.slice(-MAX_HISTORY * 2), // Keep history size controlled for API
+                tools: [{ "google_search": {} }],
+                systemInstruction: {
+                    parts: [{ text: "You are Aura, a friendly and informative voice assistant. Your response MUST be extremely short and concise, ideally one to two sentences maximum. Immediately prioritize brevity. When providing time, use Indian Standard Time (IST) if ambiguous. Tailor responses to Indian users where appropriate and always cite sources accurately. Respond contextually using the provided conversation history." }]
+                },
+            };
+
+            const response = await fetchWithBackoff(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+            const candidate = result.candidates?.[0];
+
+            if (candidate && candidate.content?.parts?.[0]?.text) {
+                const text = candidate.content.parts[0].text;
+                let sources = [];
+                const groundingMetadata = candidate.groundingMetadata;
+                
+                if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                    sources = groundingMetadata.groundingAttributions
+                        .map(attribution => ({
+                            uri: attribution.web?.uri,
+                            title: attribution.web?.title || 'Untitled Source',
+                        }))
+                        .filter(source => source.uri && source.title);
+                }
+                
+                return { text, sources };
+            } else {
+                const errorMessage = result.error?.message || "Could not generate a response.";
+                throw new Error(errorMessage);
+            }
+        }
+        
+        // 2. Fetch and Play TTS Audio
+        async function fetchGeminiTTS(textToSpeak) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: textToSpeak }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: { prebuiltVoiceConfig: { voiceName: "Achird" } }
+                    }
+                },
+            };
+            
+            const response = await fetchWithBackoff(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+            const part = result?.candidates?.[0]?.content?.parts?.[0];
+            const audioData = part?.inlineData?.data;
+            const mimeType = part?.inlineData?.mimeType;
+
+            if (audioData && mimeType && mimeType.startsWith("audio/L16")) {
+                const rateMatch = mimeType.match(/rate=(\d+)/);
+                const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+                
+                const pcmData = base64ToArrayBuffer(audioData);
+                const pcm16 = new Int16Array(pcmData);
+                const wavBlob = pcmToWav(pcm16, sampleRate);
+                const audioUrl = URL.createObjectURL(wavBlob);
+                
+                stopSpeech();
+                
+                const audio = new Audio(audioUrl);
+                currentAudio = audio;
+                
+                return new Promise((resolve) => {
+                    toggleVisualizer(true);
+                    
+                    audio.onended = () => {
+                        currentAudio = null;
+                        toggleVisualizer(false);
+                        URL.revokeObjectURL(audioUrl);
+                        resolve();
+                    };
+                    audio.onerror = (e) => {
+                        console.error("Audio playback error:", e);
+                        currentAudio = null;
+                        toggleVisualizer(false);
+                        URL.revokeObjectURL(audioUrl);
+                        resolve();
+                    };
+                    audio.play().catch(e => {
+                        console.error("Error playing audio (autoplay prevented?):", e);
+                        currentAudio = null;
+                        toggleVisualizer(false);
+                        URL.revokeObjectURL(audioUrl);
+                        resolve();
+                    });
+                });
+            } else {
+                throw new Error("Failed to generate or retrieve audio data from TTS API.");
+            }
+        }
+        
+        // 3. Image Generation
+        async function fetchGeminiImage(prompt, loadingElement) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: [{
+                    parts: [{ text: prompt }]
+                }],
+                generationConfig: {
+                    responseModalities: ['TEXT', 'IMAGE']
+                },
+            };
+            
+            const response = await fetchWithBackoff(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+            
+            const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+
+            if (base64Data) {
+                const imageUrl = `data:image/png;base64,${base64Data}`;
+                
+                // Remove loading indicator and show image preview
+                loadingElement.innerHTML = 'Image generated! <i class="fa-solid fa-image"></i> Click to view.';
+                loadingElement.style.cursor = 'pointer';
+                loadingElement.onclick = () => showImageModal(imageUrl);
+                
+                // Also speak a confirmation
+                await fetchGeminiTTS("I have generated an image for you. Take a look!");
+                
+                return imageUrl;
+            } else {
+                const errorMessage = result.error?.message || "Image generation failed or returned no image data.";
+                throw new Error(errorMessage);
+            }
+        }
+
+        // --- Action Handlers ---
+
+        /**
+         * Enhanced handler to open a website or perform a search based on the query.
+         */
+        async function handleOpenWebPage(query) {
+            // Regex captures the target following the action words
+            const openRegex = /(?:open|go to|launch)\s+(.*?)(?:\s+website|\s+page|\s+site)?\s*$/i;
+            const match = query.match(openRegex);
+            
+            if (match && match[1]) {
+                const originalTarget = match[1].trim();
+                
+                // Remove conversational noise for a cleaner target
+                let cleanedTarget = originalTarget.replace(/\b(the|of|for|me|please)\b/gi, '').trim();
+
+                let url;
+                let responseText;
+
+                // Simple check for domain-like structure (contains a dot, few spaces)
+                const looksLikeDomain = cleanedTarget.includes('.') && cleanedTarget.split(' ').length <= 3;
+                
+                if (looksLikeDomain) {
+                    // Treat as a direct URL attempt first
+                    url = cleanedTarget;
+                    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                        url = 'https://' + url;
+                    }
+                    responseText = `Opening ${originalTarget} directly.`;
+                } else {
+                    // Otherwise, treat as a search query
+                    url = `https://google.com/search?q=${encodeURIComponent(originalTarget)}`;
+                    responseText = `Searching Google for "${originalTarget}".`;
+                }
+
+                // Final safety check to avoid infinite loops by trying to open this app's domain
+                const currentDomain = window.location.hostname;
+                if (url.includes(currentDomain) && !url.includes("google.com/search")) {
+                     url = `https://google.com/search?q=${encodeURIComponent(originalTarget)}`;
+                     responseText = `I can't open my own page, so I'll search for ${originalTarget} instead.`;
+                }
+                
+                // Immediately display the action
+                addMessage('assistant', responseText);
+                await fetchGeminiTTS(responseText);
+                
+                window.open(url, '_blank');
+                return true;
+            }
+            return false; // Not a recognized open command
+        }
+
+        // --- Dedicated Media Command Handler ---
+        async function handleMediaCommand(query) {
+            // Pattern: (play|listen to|search for) (.*?) (on|via) (spotify|youtube)
+            const mediaRegex = /(?:play|listen to|search for)\s+(.+?)\s+(?:on|via)\s+(spotify|youtube|amazon\s+music)\s*$/i;
+            const match = query.match(mediaRegex);
+            
+            if (match && match[1] && match[2]) {
+                const mediaQuery = match[1].trim();
+                const platform = match[2].toLowerCase().replace(/\s+/g, '');
+                let url;
+                let actionText;
+
+                switch (platform) {
+                    case 'spotify':
+                        url = `https://open.spotify.com/search/${encodeURIComponent(mediaQuery)}`;
+                        actionText = `Searching for "${mediaQuery}" on Spotify.`;
+                        break;
+                    case 'youtube':
+                        url = `https://www.youtube.com/results?search_query=${encodeURIComponent(mediaQuery)}`;
+                        actionText = `Searching for "${mediaQuery}" on YouTube.`;
+                        break;
+                    case 'amazonmusic':
+                        url = `https://music.amazon.in/search/${encodeURIComponent(mediaQuery)}`;
+                        actionText = `Searching for "${mediaQuery}" on Amazon Music.`;
+                        break;
+                    default:
+                        return false;
+                }
+
+                // Immediately display the action
+                addMessage('assistant', actionText);
+                await fetchGeminiTTS(actionText);
+                
+                window.open(url, '_blank');
+                return true;
+            }
+            
+            return false;
+        }
+
+
+        // --- Core Action Dispatch ---
+
+        function clearChatHistory() {
+            // Reset chat history and initial message
+            chatHistory = [];
+            elements.chatContainer.innerHTML = '';
+            addMessage('assistant', "I have cleared my memory. Hello! I'm Aura. Try saying \"play money song on Spotify\" or \"open Google\". I cannot control system settings like volume.");
+        }
+
+        async function handleWakeWord(query) {
+            if (isProcessing) return;
+            toggleProcessing(true);
+            addMessage('user', query); // User message added first
+
+            const fixedResponse = "Heyy, how can I help you?";
+            
+            try {
+                addMessage('assistant', fixedResponse);
+                await fetchGeminiTTS(fixedResponse);
+            } catch (error) {
+                console.error("Aura Wake Word TTS Error:", error);
+                addMessage('assistant', `Sorry, I can hear you but I ran into an audio issue.`);
+                showModal('Audio Failed', 'I detected the wake word but could not play the audio response.');
+            } finally {
+                // Ensure processing lock is released and UI is reset after response, even if TTS failed
+                stopSpeech(); 
+                toggleProcessing(false);
+            }
+        }
+
+        async function processQuery(query) {
+            if (isProcessing) return;
+            if (!query.trim()) return;
+
+            if (isListening) recognition.stop();
+
+            const normalizedQuery = query.toLowerCase().trim();
+            const imageTrigger = normalizedQuery.match(/(generate|draw|create) (an |a |a realistic |a photo of |an image of |picture of )?(.+)/);
+
+            // 1. Handle Control Actions (Clear Memory)
+            if (normalizedQuery.includes('clear chat') || normalizedQuery.includes('forget everything')) {
+                clearChatHistory();
+                await fetchGeminiTTS("I have cleared our conversation history.");
+                return;
+            }
+            
+            toggleProcessing(true);
+            elements.textInput.value = '';
+
+            // CRITICAL: Add user message immediately at the start of processing
+            addMessage('user', query.trim());
+
+            try {
+                // 2. Handle Image Generation Request
+                if (imageTrigger) {
+                    const imagePrompt = imageTrigger[3].trim();
+                    
+                    const loadingMsg = addMessage('assistant', `<div class="image-loading"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Generating image for: "${imagePrompt}"...</div>`);
+                    loadingMsg.classList.add('image-loading');
+
+                    await fetchGeminiImage(imagePrompt, loadingMsg);
+                    
+                }
+                // 3. Handle Media Command (Play song/video)
+                else if (await handleMediaCommand(query)) {
+                    // Action handled inside, which adds assistant message and speaks.
+                    return;
+                }
+                // 4. Handle OPEN Web Page Command
+                else if (await handleOpenWebPage(query)) {
+                    // Action handled inside, which adds assistant message and speaks.
+                    return;
+                }
+                // 5. Fallback to Text/Conversational Request
+                else {
+                    const { text, sources } = await fetchGeminiText(query.trim());
+                    addMessage('assistant', text, sources); // Add assistant response to UI and history
+                    await fetchGeminiTTS(text);
+                }
+
+            } catch (error) {
+                console.error("Aura Processing Error:", error);
+                const errorMessage = error.message.includes('API Error') 
+                    ? `An API error occurred: ${error.message}.`
+                    : 'A critical error occurred while processing your request.';
+                
+                addMessage('assistant', `Sorry, I ran into an issue. ${errorMessage}`);
+                showModal('Processing Failed', errorMessage);
+            } finally {
+                stopSpeech(); 
+                toggleProcessing(false);
+            }
+        }
+        
+        // --- Speech Recognition Setup ---
+
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = true; 
+                recognition.interimResults = false;
+                recognition.lang = 'en-IN'; 
+                
+                recognition.onstart = function() {
+                    isListening = true;
+                    elements.micBtn.classList.add('active');
+                    setStatus('listening');
+                    elements.textInput.placeholder = "Listening... Say 'Hey Aura', 'Ok Aura', or 'Hey'...";
+                    elements.textInput.value = ""; 
+                };
+
+                recognition.onresult = function(event) {
+                    const transcript = Array.from(event.results)
+                        .map(result => result[0].transcript)
+                        .join(''); 
+
+                    elements.textInput.value = transcript;
+                    
+                    const normalizedTranscript = transcript.toLowerCase().trim();
+
+                    if (event.results[0].isFinal) {
+                        if (normalizedTranscript.includes('hey aura') || normalizedTranscript.includes('ok aura') || normalizedTranscript === 'hey') {
+                            handleWakeWord(transcript);
+                        } else if (normalizedTranscript.length > 0) {
+                            processQuery(transcript);
+                        }
+                    }
+                };
+
+                recognition.onend = function() {
+                    isListening = false;
+                    elements.micBtn.classList.remove('active');
+                    if (!isProcessing) {
+                        if (elements.micBtn.classList.contains('active')) {
+                            setTimeout(() => {
+                                try {
+                                    recognition.start();
+                                } catch(e) {}
+                            }, 500); 
+                            return; 
+                        }
+                        setStatus('ready');
+                        elements.textInput.placeholder = "Type a question or command...";
+                    }
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error', event.error);
+                    if (event.error !== 'no-speech' && event.error !== 'audio-capture') {
+                        recognition.stop();
+                        showModal('Microphone Error', `Recognition error: ${event.error}. Please ensure mic permissions are granted.`);
+                    }
+                };
+
+            } else {
+                elements.micBtn.disabled = true;
+                elements.textInput.placeholder = "Voice input unsupported. Please type.";
+                showModal('Browser Warning', 'Your browser does not fully support the Web Speech API for voice input.');
+            }
+        }
+
+        // --- Event Handlers & Initialization ---
+
+        function handleSend() {
+            if (isListening) recognition.stop();
+            
+            const query = elements.textInput.value;
+            const normalizedQuery = query.toLowerCase().trim();
+            
+            if (normalizedQuery === 'hey aura' || normalizedQuery === 'ok aura' || normalizedQuery === 'hey') {
+                handleWakeWord(query);
+            } else {
+                processQuery(query);
+            }
+        }
+        
+        function handleMic() {
+            if (isProcessing) return; 
+            if (!recognition) {
+                showModal('Error', 'Speech Recognition is unavailable.');
+                return;
+            }
+
+            if (isListening) {
+                // User explicitly clicked the button to stop listening
+                elements.micBtn.classList.remove('active'); 
+                recognition.stop();
+            } else {
+                try {
+                    // User explicitly clicked the button to start listening
+                    elements.micBtn.classList.add('active'); // Add active class to allow auto-restart on end event
+                    recognition.start();
+                } catch (e) {
+                    console.error("Recognition start attempt error:", e);
+                    showModal('Microphone Error', 'Could not start microphone. Check permissions.');
+                }
+            }
+        }
+
+        // --- Full Stop and Handoff Handler ---
+        function handleStopButton() {
+            // 1. Stop Audio and Visualizer
+            stopSpeech(); 
+            
+            // 2. Stop Speech Recognition (Interrupt ongoing listening loop)
+            if (isListening && recognition) {
+                // Remove 'active' class to prevent auto-restart, then stop recognition
+                elements.micBtn.classList.remove('active'); 
+                recognition.stop(); 
+            }
+
+            // 3. Reset Processing Lock (Immediate handoff to user/enables inputs)
+            toggleProcessing(false);
+        }
+        
+        window.onload = () => {
+            initSpeechRecognition();
+            setStatus('ready'); 
+            
+            // Event Listeners
+            elements.sendBtn.addEventListener('click', handleSend);
+            elements.micBtn.addEventListener('click', handleMic);
+            elements.stopBtn.addEventListener('click', handleStopButton); 
+            elements.modalCloseBtn.addEventListener('click', hideModal);
+            elements.imageModalCloseBtn.addEventListener('click', hideImageModal);
+            
+            elements.textInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleSend();
+                }
+            });
+            
+            // Ensure mic stops reliably when focusing on text input.
+            elements.textInput.addEventListener('focus', () => {
+                if (isListening && recognition) {
+                    // Remove 'active' class to prevent auto-restart, then stop recognition
+                    elements.micBtn.classList.remove('active'); 
+                    recognition.stop();
+                    // Status will be set to 'ready' by recognition.onend
+                }
+            });
+            
+            // Initialize chat history with the initial message for context
+            chatHistory.push({ 
+                role: 'model', 
+                parts: [{ text: "Hello! I'm Aura. Try saying \"play money song on Spotify\" or \"open Google\". I cannot control system settings like volume." }] 
+            });
+        };
+    </script>
+</body>
+</html>
